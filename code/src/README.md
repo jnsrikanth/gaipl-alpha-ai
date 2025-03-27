@@ -1,3 +1,4 @@
+cat README.md 
 # GLPI-based System with FastAPI and React
 
 ## Project Overview
@@ -20,6 +21,12 @@ The system follows a microservices architecture pattern, with distinct services 
                    │  MariaDB  │           │  RabbitMQ │
                    │           │           │           │
                    └───────────┘           └───────────┘
+                         │                       │
+                   ┌─────▼─────┐           ┌─────▼─────┐
+                   │           │           │           │
+                   │  Ollama   │◄──────────┤ LangChain │
+                   │           │           │           │
+                   └───────────┘           └───────────┘
 ```
 
 - **Frontend**: React-based SPA for user interaction
@@ -27,6 +34,8 @@ The system follows a microservices architecture pattern, with distinct services 
 - **Database**: MariaDB for data persistence
 - **Message Broker**: RabbitMQ for asynchronous processing and real-time messaging
 - **Core**: GLPI as the foundation for IT asset management
+- **Ollama**: Local AI model hosting and inference service
+- **LangChain**: Framework for developing applications powered by language models
 
 ## Components Description
 
@@ -67,6 +76,39 @@ Reverse proxy and load balancer handling:
 - Routing
 - SSL/TLS termination
 - Service discovery
+
+## AI Integration
+
+The system integrates advanced AI capabilities through Ollama and LangChain, enhancing the user experience and automation capabilities.
+
+### Ollama
+
+Ollama provides local AI model hosting and inference capabilities:
+- Runs large language models locally for enhanced privacy and reduced latency
+- Supports multiple open-source models (Llama 2, Mistral, Vicuna, etc.)
+- Processes natural language queries and generates contextual responses
+- Integrates with the FastAPI backend to provide AI-powered assistance
+
+### LangChain
+
+LangChain is a framework for developing applications powered by language models:
+- Connects the system with Ollama's language models
+- Enables context-aware conversations through memory components
+- Provides tools for document retrieval and knowledge base integration
+- Powers advanced features like:
+  - Intelligent ticket categorization and routing
+  - Automated response suggestions
+  - Knowledge extraction from technical documentation
+  - Conversational interfaces for system interaction
+
+### Enhanced System Capabilities
+
+The AI integration delivers significant enhancements:
+- **Natural Language Processing**: Users can interact with the system using natural language
+- **Automated Assistance**: AI-powered recommendations for ticket resolution
+- **Knowledge Management**: Improved information retrieval and insight generation
+- **User Experience**: Conversational interfaces that simplify complex tasks
+- **Operational Efficiency**: Reduced manual effort through AI-assisted workflows
 
 ## Prerequisites
 - Docker (version 20.10.x or later)
@@ -111,6 +153,57 @@ docker-compose exec glpi php bin/console user:create --admin username password "
 - Modern UI: http://localhost:3000
 - API Documentation: http://localhost:8000/docs
 
+## Data Generation Scripts
+
+The system includes powerful scripts for generating realistic test data to populate your GLPI instance with cloud infrastructure-related incidents and changes.
+
+### generate_incidents.py
+
+This script generates simulated cloud infrastructure incidents with realistic attributes:
+
+- Creates randomized incident tickets related to cloud services
+- Simulates issues with AWS, Azure, GCP, and other cloud providers
+- Generates diverse incident categories (outages, performance issues, security alerts)
+- Populates tickets with detailed descriptions, priorities, and impact levels
+- Assigns realistic timestamps and statuses to incidents
+
+### generate_changes.py
+
+This script creates simulated change requests for cloud infrastructure:
+
+- Produces change tickets for cloud resource modifications
+- Generates various change types (planned maintenance, updates, scaling operations)
+- Creates realistic change approval workflows and implementation plans
+- Simulates different risk levels and change categories
+- Adds appropriate planning and execution timeframes
+
+### Usage
+
+To generate test data, run the following commands:
+
+```bash
+# Generate sample incidents (default: 50 incidents)
+python generate_incidents.py --count 100
+
+# Generate sample changes (default: 30 changes)
+python generate_changes.py --count 50
+```
+
+Additional options:
+```bash
+# Set date range for generated data
+python generate_incidents.py --start-date 2023-01-01 --end-date 2023-12-31
+
+# Specify urgency distribution
+python generate_changes.py --high-urgency-percent 20 --medium-urgency-percent 50
+```
+
+These scripts are valuable for:
+- Creating realistic test environments
+- Demonstrating system capabilities
+- Testing reporting and dashboard features
+- Training users on ticket handling procedures
+
 ## Environment Variables
 
 ### Core Configuration
@@ -136,6 +229,14 @@ docker-compose exec glpi php bin/console user:create --admin username password "
 - `SMTP_USER`: SMTP username
 - `SMTP_PASSWORD`: SMTP password
 - `MAIL_FROM`: Default sender email address
+
+### AI Configuration
+- `OLLAMA_BASE_URL`: URL for the Ollama service (default: http://ollama:11434)
+- `OLLAMA_MODEL`: Default AI model to use (default: llama2)
+- `LANGCHAIN_VERBOSE`: Enable verbose logging for LangChain (true/false)
+- `LANGCHAIN_MEMORY_TYPE`: Type of memory to use (default: conversation_buffer)
+- `EMBEDDING_MODEL`: Model to use for embeddings (default: sentence-transformers/all-mpnet-base-v2)
+- `VECTOR_STORE_PATH`: Path to store vector embeddings (default: ./vector_store)
 
 ## Usage
 
@@ -233,4 +334,3 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## License
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
