@@ -43,11 +43,17 @@ The system follows a microservices architecture pattern, with distinct services 
 The GLPI (Gestionnaire Libre de Parc Informatique) serves as the core engine, providing inventory management, ticketing, and service catalog capabilities. It offers a comprehensive ITIL-compliant service management framework.
 
 ### FastAPI Backend
-A modern Python-based API service that extends GLPI functionality with custom business logic and serves as an integration layer between the frontend and GLPI core. It provides:
-- RESTful API endpoints
+A modern Python-based API service located in `IPE-AI/llm-backend/api/` that extends GLPI functionality with custom business logic and serves as an integration layer between the frontend and GLPI core. It provides:
+- RESTful API endpoints with automatic OpenAPI documentation
 - WebSocket support for real-time chat functionality
-- Authentication and authorization
+- Authentication and authorization with JWT token handling
 - Custom business logic implementation
+- Integration with Ollama for AI-powered assistance
+- Asynchronous processing capabilities
+- Database abstraction with SQLAlchemy and Pydantic models
+- Middleware for request processing, CORS handling, and error management
+- Environment-based configuration system
+- Comprehensive logging and monitoring
 
 ### React Frontend
 A responsive and intuitive user interface built with React, providing:
@@ -126,16 +132,19 @@ glpi-system/
 │   ├── Dockerfile                  # GLPI container configuration
 │   ├── config/                     # GLPI configuration files
 │   └── plugins/                    # GLPI plugin directory
-├── backend/                        # FastAPI backend service
-│   ├── Dockerfile                  # Backend container configuration
-│   ├── app/                        # Application code
-│   │   ├── main.py                 # FastAPI entry point
-│   │   ├── api/                    # API endpoints
-│   │   ├── core/                   # Core functionality
-│   │   ├── db/                     # Database models and operations
-│   │   └── services/               # Business logic services
-│   ├── tests/                      # Backend tests
-│   └── requirements.txt            # Python dependencies
+├── IPE-AI/
+│   ├── llm-backend/                # LLM backend directory
+│   │   ├── api/                    # FastAPI backend service
+│   │   │   ├── main.py             # FastAPI entry point
+│   │   │   ├── endpoints/          # API endpoints definition
+│   │   │   ├── models/             # Data models and schemas
+│   │   │   ├── controllers/        # Business logic controllers
+│   │   │   ├── services/           # Service implementations
+│   │   │   ├── utils/              # Utility functions
+│   │   │   ├── middleware/         # API middleware components
+│   │   │   └── tests/              # Backend unit tests
+│   │   ├── venv/                   # Python virtual environment
+│   │   └── requirements.txt        # Python dependencies
 ├── frontend/                       # React frontend application
 │   ├── Dockerfile                  # Frontend container configuration
 │   ├── src/                        # React source code
@@ -184,11 +193,16 @@ All services are containerized with Docker and orchestrated using Docker Compose
    - Volumes: GLPI files, configurations
    - Dependencies: MariaDB
 
-2. **FastAPI Backend (`backend`)**
+2. **FastAPI Backend (`fastapi`)**
    - Base Image: `python:3.10-slim`
-   - Ports: `8000:8000`
-   - Volumes: Application code
-   - Dependencies: MariaDB, RabbitMQ
+   - Ports: `8000:8000` 
+   - Volumes: Application code from `IPE-AI/llm-backend/api/`
+   - Dependencies: MariaDB, RabbitMQ, Ollama
+   - Features:
+     - Automatic API documentation (Swagger UI and ReDoc)
+     - Type-validated request/response models
+     - Dependency injection system
+     - Background task processing
 
 3. **React Frontend (`frontend`)**
    - Base Image: `node:18-alpine`
@@ -230,12 +244,13 @@ All services are containerized with Docker and orchestrated using Docker Compose
 ### Component Relationships
 
 The system components interact in the following ways:
-
 1. **Frontend → Backend**: React frontend communicates with FastAPI backend via REST APIs
 2. **Backend → GLPI**: Backend interacts with GLPI through its API
 3. **Chat UI → Backend**: Chat application connects to WebSocket endpoints on the backend
 4. **Backend → RabbitMQ**: Backend publishes and consumes messages for async processing
 5. **LangChain → Ollama**: LangChain queries Ollama for AI model inference
+6. **LangChain → Backend**: LangChain provides AI capabilities to the backend
+7. **Backend → Ollama**: FastAPI backend directly interfaces with Ollama for AI processing
 6. **LangChain → Backend**: LangChain provides AI capabilities to the backend
 7. **IPE-AI ↔ integrated-experience**: AI core services integrate with UX components
 
@@ -313,6 +328,18 @@ To set up the AI components:
    - Add API keys to the `.env` file
    - Connect backend services to LangChain endpoints
    - Set up WebSocket connections for real-time AI responses
+
+4. **FastAPI Backend Configuration**:
+   - Located in `IPE-AI/llm-backend/api/`
+   - Handles the HTTP API and WebSocket interfaces
+   - Implements the controller layer between frontend and AI components
+   - Configurable through environment variables in the `.env` file
+   - Key components:
+     - **endpoints/** - API route definitions and handlers
+     - **models/** - Pydantic data models for request/response validation
+     - **services/** - Business logic and external service integrations
+     - **controllers/** - Orchestration of service components
+     - **middleware/** - Request/response processing middleware
 
 4. **Configure Knowledge Base** (optional):
    - Place documentation in `langchain/app/knowledge`
@@ -487,8 +514,8 @@ pip install -r requirements-dev.txt # Backend dependencies
 2. Start development servers:
 ```bash
 # Backend
-cd backend
-uvicorn app.main:app --reload --port 8000
+cd IPE-AI/llm-backend/api
+uvicorn main:app --reload --port 8000
 
 # Frontend
 cd frontend
@@ -498,7 +525,7 @@ npm run dev
 ### Running Tests
 ```bash
 # Backend tests
-cd backend
+cd IPE-AI/llm-backend/api
 pytest
 
 # Frontend tests
@@ -509,7 +536,7 @@ npm test
 ### Code Linting and Formatting
 ```bash
 # Backend
-cd backend
+cd IPE-AI/llm-backend/api
 flake8 .
 black .
 
