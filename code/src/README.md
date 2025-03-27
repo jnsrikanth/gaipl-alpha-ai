@@ -88,7 +88,7 @@ Ollama provides local AI model hosting and inference capabilities:
 - Supports multiple open-source models (Llama 2, Mistral, Vicuna, etc.)
 - Processes natural language queries and generates contextual responses
 - Integrates with the FastAPI backend to provide AI-powered assistance
-
+- Containerized deployment for consistent environment across installations
 ### LangChain
 
 LangChain is a framework for developing applications powered by language models:
@@ -109,6 +109,182 @@ The AI integration delivers significant enhancements:
 - **Knowledge Management**: Improved information retrieval and insight generation
 - **User Experience**: Conversational interfaces that simplify complex tasks
 - **Operational Efficiency**: Reduced manual effort through AI-assisted workflows
+
+## Project Structure
+
+The project repository is organized into modular components with a clear separation of concerns:
+
+```
+glpi-system/
+├── docker-compose.yml              # Main Docker Compose configuration
+├── docker-compose.prod.yml         # Production-specific configurations
+├── .env.example                    # Example environment variables
+├── README.md                       # Project documentation
+├── generate_incidents.py           # Script to generate test incidents
+├── generate_changes.py             # Script to generate test changes
+├── glpi/                           # GLPI core files
+│   ├── Dockerfile                  # GLPI container configuration
+│   ├── config/                     # GLPI configuration files
+│   └── plugins/                    # GLPI plugin directory
+├── backend/                        # FastAPI backend service
+│   ├── Dockerfile                  # Backend container configuration
+│   ├── app/                        # Application code
+│   │   ├── main.py                 # FastAPI entry point
+│   │   ├── api/                    # API endpoints
+│   │   ├── core/                   # Core functionality
+│   │   ├── db/                     # Database models and operations
+│   │   └── services/               # Business logic services
+│   ├── tests/                      # Backend tests
+│   └── requirements.txt            # Python dependencies
+├── frontend/                       # React frontend application
+│   ├── Dockerfile                  # Frontend container configuration
+│   ├── src/                        # React source code
+│   ├── public/                     # Static assets
+│   └── package.json                # Node.js dependencies
+├── chatbot-react-app/              # Chat UI component
+│   ├── Dockerfile                  # Chat UI container configuration
+│   ├── src/                        # Chat application source code
+│   └── package.json                # Chat UI dependencies
+├── IPE-AI/                         # AI core functionality
+│   ├── Dockerfile                  # AI service container configuration
+│   ├── app/                        # AI service code
+│   │   ├── main.py                 # AI service entry point
+│   │   ├── models/                 # AI model definitions
+│   │   ├── services/               # AI services
+│   │   └── utils/                  # Utility functions
+│   └── requirements.txt            # AI Python dependencies
+├── integrated-experience/          # Integration layer for UX/AI
+│   ├── Dockerfile                  # Integration service configuration
+│   ├── app/                        # Integration service code
+│   │   ├── connectors/             # Service connectors
+│   │   └── orchestrators/          # Service orchestration 
+│   └── requirements.txt            # Integration dependencies
+├── ollama/                         # Ollama service for AI model hosting
+│   ├── Dockerfile                  # Ollama container configuration
+│   ├── models/                     # Pre-downloaded models
+│   └── config/                     # Ollama configuration
+└── langchain/                      # LangChain integration service
+    ├── Dockerfile                  # LangChain container configuration
+    ├── app/                        # LangChain application code
+    │   ├── main.py                 # LangChain service entry point
+    │   ├── chains/                 # LangChain chain definitions
+    │   ├── memory/                 # Conversation memory components
+    │   ├── tools/                  # Custom LangChain tools
+    │   └── embeddings/             # Vector embedding utilities
+    └── requirements.txt            # LangChain Python dependencies
+```
+
+### Docker Service Configuration
+
+All services are containerized with Docker and orchestrated using Docker Compose:
+
+1. **GLPI (`glpi`)**
+   - Base Image: `php:8.1-apache`
+   - Ports: `8080:80`
+   - Volumes: GLPI files, configurations
+   - Dependencies: MariaDB
+
+2. **FastAPI Backend (`backend`)**
+   - Base Image: `python:3.10-slim`
+   - Ports: `8000:8000`
+   - Volumes: Application code
+   - Dependencies: MariaDB, RabbitMQ
+
+3. **React Frontend (`frontend`)**
+   - Base Image: `node:18-alpine`
+   - Ports: `3000:3000`
+   - Volumes: Source code
+   - Dependencies: Backend API
+
+4. **Chat UI (`chatbot-react-app`)**
+   - Base Image: `node:18-alpine`
+   - Ports: `5173:5173`
+   - Volumes: Source code
+   - Dependencies: Backend API, WebSocket connections
+
+5. **MariaDB (`db`)**
+   - Image: `mariadb:10.6`
+   - Ports: `3306:3306`
+   - Volumes: Database data
+   - Environment: Database credentials
+
+6. **RabbitMQ (`rabbitmq`)**
+   - Image: `rabbitmq:3-management`
+   - Ports: `5672:5672` (AMQP), `15672:15672` (Management)
+   - Volumes: Message queue data
+
+7. **Ollama (`ollama`)**
+   - Custom Dockerfile based on `ollama/ollama:latest`
+   - Ports: `11434:11434`
+   - Volumes:
+     - `./ollama/models:/root/.ollama/models` (persisted models)
+     - `./ollama/config:/etc/ollama` (configuration)
+   - GPU Support: Optional NVIDIA GPU passthrough with runtime configuration
+   - Environment variables for model configuration and resource allocation
+8. **LangChain Service (`langchain`)**
+   - Base Image: `python:3.10-slim`
+   - Ports: `7000:7000`
+   - Volumes: Application code
+   - Dependencies: Ollama, Backend API
+
+### Component Relationships
+
+The system components interact in the following ways:
+
+1. **Frontend → Backend**: React frontend communicates with FastAPI backend via REST APIs
+2. **Backend → GLPI**: Backend interacts with GLPI through its API
+3. **Chat UI → Backend**: Chat application connects to WebSocket endpoints on the backend
+4. **Backend → RabbitMQ**: Backend publishes and consumes messages for async processing
+5. **LangChain → Ollama**: LangChain queries Ollama for AI model inference
+6. **LangChain → Backend**: LangChain provides AI capabilities to the backend
+7. **IPE-AI ↔ integrated-experience**: AI core services integrate with UX components
+
+### AI Components
+
+The AI functionality is provided by three interconnected components:
+
+1. **IPE-AI Directory**
+   - Core AI functionality and model interfaces
+   - Processes natural language requests
+   - Handles model inference and response generation
+   - Manages AI session contexts
+
+2. **integrated-experience Directory**
+   - Integration layer between AI and user experience
+   - Orchestrates the flow of information between components
+   - Provides contextual awareness for AI responses
+   - Manages user sessions and preferences
+
+3. **chatbot-react-app Directory**
+   - User interface for conversational AI interaction
+   - Renders chat messages and responses
+   - Handles user input and commands
+   - Provides real-time communication through WebSockets
+
+### AI Components Setup
+
+To set up the AI components:
+
+1. **Configure Ollama**:
+   - Models are automatically downloaded on first use and persisted to the `ollama/models` volume
+   - Configure model preferences in `ollama/config/ollama.json`
+   - Customize the Ollama container via the `ollama/Dockerfile` for specific requirements
+   - GPU acceleration can be enabled in `docker-compose.yml` by setting appropriate runtime configurations
+   - Adjust memory and CPU allocations in the `docker-compose.yml` file according to your model requirements
+2. **Configure LangChain**:
+   - Set up environment variables for model selection and parameters
+   - Configure memory components for conversation history
+   - Set vector store path for embedded knowledge bases
+
+3. **Integrate with Backend**:
+   - Add API keys to the `.env` file
+   - Connect backend services to LangChain endpoints
+   - Set up WebSocket connections for real-time AI responses
+
+4. **Configure Knowledge Base** (optional):
+   - Place documentation in `langchain/app/knowledge`
+   - Run embedding generation: `docker-compose exec langchain python -m app.embeddings.generate`
+   - Configure retrieval parameters in the `.env` file
 
 ## Prerequisites
 - Docker (version 20.10.x or later)
@@ -233,11 +409,13 @@ These scripts are valuable for:
 ### AI Configuration
 - `OLLAMA_BASE_URL`: URL for the Ollama service (default: http://ollama:11434)
 - `OLLAMA_MODEL`: Default AI model to use (default: llama2)
+- `OLLAMA_CONCURRENCY`: Number of concurrent requests Ollama can handle (default: 2)
+- `OLLAMA_GPU_ENABLED`: Enable GPU acceleration for Ollama (true/false)
+- `OLLAMA_MODEL_PATH`: Custom path for model storage (default: /root/.ollama/models)
 - `LANGCHAIN_VERBOSE`: Enable verbose logging for LangChain (true/false)
 - `LANGCHAIN_MEMORY_TYPE`: Type of memory to use (default: conversation_buffer)
 - `EMBEDDING_MODEL`: Model to use for embeddings (default: sentence-transformers/all-mpnet-base-v2)
 - `VECTOR_STORE_PATH`: Path to store vector embeddings (default: ./vector_store)
-
 ## Usage
 
 ### Admin Dashboard
