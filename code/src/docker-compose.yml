@@ -1,0 +1,81 @@
+services:
+  db:
+    image: mysql:5.7
+    platform: linux/amd64
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: glpi
+      MYSQL_DATABASE: glpi
+      MYSQL_USER: glpi
+      MYSQL_PASSWORD: glpi
+    volumes:
+      - ./mysql/conf.d:/etc/mysql/conf.d
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglpi"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  glpi:
+    image: diouxx/glpi
+    platform: linux/amd64
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - TIMEZONE=Europe/Paris
+      - MYSQL_ROOT_PASSWORD=glpi
+      - MYSQL_DATABASE=glpi
+      - MYSQL_USER=glpi
+      - MYSQL_PASSWORD=glpi
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/apirest.php"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.fastapi
+    ports:
+      - "8000:8000"
+    environment:
+      - GLPI__URL=http://glpi:80/apirest.php
+      - GLPI__APP_TOKEN=Hmhe7SmgeM2qTELNadzifcQTRMFreG2ZSPhuNPhr
+      - GLPI__USER_TOKEN=JfACYFudr3jfH2JyyGmJSdNXXTfEOgHzMIhq3CsK
+    depends_on:
+      glpi:
+        condition: service_healthy
+
+  chat-ui:
+    build:
+      context: ./IPE-AI/llm-backend/chat-ui
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BACKEND_URL=http://localhost:8000
+    volumes:
+      - ./IPE-AI/llm-backend/chat-ui:/app
+      - /app/node_modules
+    depends_on:
+      - fastapi
+
+  data-generator:
+    image: python:3.9
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    command: tail -f /dev/null  # Keep container running
+
+volumes:
+  mysql_data:
