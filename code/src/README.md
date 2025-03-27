@@ -271,6 +271,39 @@ To set up the AI components:
    - Customize the Ollama container via the `ollama/Dockerfile` for specific requirements
    - GPU acceleration can be enabled in `docker-compose.yml` by setting appropriate runtime configurations
    - Adjust memory and CPU allocations in the `docker-compose.yml` file according to your model requirements
+   - For detailed Ollama configuration and usage, refer to the dedicated documentation in [`ollama/README.md`](ollama/README.md)
+
+   #### Mistral Model Setup
+   
+   This project primarily uses the Mistral model for AI capabilities, which offers an excellent balance between performance and resource efficiency:
+   
+   - **Model Name**: Mistral (mistral:7b)
+   - **Parameter Size**: 7 billion parameters
+   - **Available Quantization Options**:
+     - `mistral:7b` (full precision)
+     - `mistral:7b-q4_0` (4-bit quantized, recommended for most deployments)
+     - `mistral:7b-q4_K_M` (4-bit quantized with key/value cache in fp16)
+   - **Context Length**: 8,192 tokens
+   - **Resource Requirements**:
+     - Full precision: ~16GB RAM
+     - 4-bit quantized: ~5-8GB RAM
+     - Disk Space: ~4-5GB (depending on quantization)
+   - **License**: Apache 2.0
+
+   #### Pulling the Mistral Model
+   
+   The Docker setup will attempt to pull the model automatically on startup, but you can also pull it manually:
+
+   ```bash
+   # From your host system
+   docker-compose exec ollama ollama pull mistral:7b-q4_0
+   ```
+
+   #### Common Mistral Model Issues
+
+   - **Out of Memory Errors**: If you encounter OOM errors, try using the quantized version (`mistral:7b-q4_0`) and increase container memory limits in `docker-compose.yml`
+   - **Slow First Response**: The first request may be slow as the model loads into memory; subsequent requests will be faster
+   - **Model Loading Failures**: Ensure sufficient disk space and verify model files aren't corrupted
 2. **Configure LangChain**:
    - Set up environment variables for model selection and parameters
    - Configure memory components for conversation history
