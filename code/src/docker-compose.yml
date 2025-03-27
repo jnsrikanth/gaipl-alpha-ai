@@ -1,4 +1,50 @@
+cat docker-compose.yml 
+version: '3.8'
+
 services:
+  ollama:
+    build:
+      context: ./ollama
+      dockerfile: Dockerfile
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ./ollama/models:/root/.ollama/models
+      - ./ollama/config:/etc/ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_MODELS_PATH=/root/.ollama/models
+      - OLLAMA_DEFAULT_MODEL=mistral
+      - OLLAMA_MODEL_PARAMS={"temperature":0.7,"top_k":50,"top_p":0.95,"gpu_layers":33}
+      - OLLAMA_VERBOSE=true
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    command: >
+      sh -c "ollama serve &
+             sleep 10 &&
+             if ! ollama list | grep mistral; then
+               echo 'Pulling Mistral model...' &&
+               ollama pull mistral &&
+               echo 'Mistral model pulled successfully!'
+             fi &&
+             tail -f /dev/null"
+    deploy:
+      resources:
+        limits:
+          memory: 12G
+          cpus: '4.0'
+        reservations:
+          memory: 4G
+          cpus: '2.0'
+
   db:
     image: mysql:5.7
     platform: linux/amd64
@@ -12,12 +58,13 @@ services:
     volumes:
       - ./mysql/conf.d:/etc/mysql/conf.d
       - mysql_data:/var/lib/mysql
+    networks:
+      - app_network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglpi"]
       interval: 10s
       timeout: 5s
       retries: 10
-
   glpi:
     image: diouxx/glpi
     platform: linux/amd64
@@ -32,13 +79,14 @@ services:
       - MYSQL_DATABASE=glpi
       - MYSQL_USER=glpi
       - MYSQL_PASSWORD=glpi
+    networks:
+      - app_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/apirest.php"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 40s
-
   fastapi:
     build:
       context: .
@@ -49,10 +97,13 @@ services:
       - GLPI__URL=http://glpi:80/apirest.php
       - GLPI__APP_TOKEN=Hmhe7SmgeM2qTELNadzifcQTRMFreG2ZSPhuNPhr
       - GLPI__USER_TOKEN=JfACYFudr3jfH2JyyGmJSdNXXTfEOgHzMIhq3CsK
+    networks:
+      - app_network
     depends_on:
       glpi:
         condition: service_healthy
-
+      ollama:
+        condition: service_healthy
   chat-ui:
     build:
       context: ./IPE-AI/llm-backend/chat-ui
@@ -64,14 +115,17 @@ services:
     volumes:
       - ./IPE-AI/llm-backend/chat-ui:/app
       - /app/node_modules
+    networks:
+      - app_network
     depends_on:
       - fastapi
-
   data-generator:
     image: python:3.9
     volumes:
       - .:/app
     working_dir: /app
+    networks:
+      - app_network
     depends_on:
       db:
         condition: service_healthy
