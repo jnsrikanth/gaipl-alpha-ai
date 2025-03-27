@@ -1,0 +1,44 @@
+cat ollama.json 
+{
+  "models": {
+    "default": "llama2",
+    "preload": ["llama2", "mistral"],
+    "allowed": ["llama2", "mistral", "codellama", "phi", "orca-mini"]
+  },
+  "system": {
+    "cpu": {
+      "threads": 4,
+      "use_avx": true,
+      "use_avx2": true,
+      "use_fma": true
+    },
+    "gpu": {
+      "enabled": true,
+      "layers": 35
+    },
+    "memory": {
+      "max_ram": "8GiB",
+      "ram_utilization": 0.8
+    }
+  },
+  "api": {
+    "host": "0.0.0.0",
+    "port": 11434,
+    "cors_allow_origins": ["*"],
+    "request_timeout": 300
+  },
+  "cache": {
+    "enabled": true,
+    "size": "1GiB"
+  },
+  "network": {
+    "download_models": true,
+    "concurrent_downloads": 2,
+    "registry": "https://registry.ollama.ai"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "file": "/var/log/ollama.log"
+  }
+}
